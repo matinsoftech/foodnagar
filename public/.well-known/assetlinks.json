@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "user.altic.matinsoftech",
+      "sha256_cert_fingerprints": [
+        "7A:D7:70:AB:81:69:89:CA:EC:0A:C2:F7:B4:BE:8B:DD:1D:BD:BB:04:53:64:93:D6:99:A8:9C:BF:E8:6B:65:F8"
+      ]
+    }
+  }
+]

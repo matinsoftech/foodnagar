@@ -1,0 +1,57 @@
+:root {
+
+    --theme-color: #FFB300;
+
+    --color-dark: #111111;
+
+    --color-white: #ffffff;
+
+    --box-shadow: 0 0 40px 5px rgb(0 0 0 / 5%);
+
+    --transition: all .5s ease-in-out;
+
+}
+
+
+
+
+
+
+
+
+
+
+.hero-section {
+    padding: 5% 0;
+    width: 100%;
+    background-color: #111111;
+    background-image: url('/css/assets/images/services/slider-glob.png');
+
+    align-content: center;
+
+}
+
+.Get-Mobile-app {
+    padding: 5% 0 0 0;
+
+    background-color: #f2efe6;
+}
+
+.Mobile-side {
+    height: 100%;
+    background-image: url('../images/services/app-bg.png');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.sit-at-Home {
+    background-color: #111111;
+}
+.serv-Read-btn{ color: #111111;
+    background-color: #652d89;
+}
+.serv-Read-btn:hover{
+    background-color: #faf9fb;
+    transition: width .25s ease-out;
+}
