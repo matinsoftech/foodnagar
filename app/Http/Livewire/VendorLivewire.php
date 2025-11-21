@@ -75,6 +75,11 @@ class VendorLivewire extends VendorTimingLivewire
     public $password;
     public $alwaysOpen = false;
 
+    public $discount_value;
+    public $discount_type = 'percent';
+    public $discount_from;
+    public $discount_to;
+
     public function rules()
     {
         return [
@@ -93,6 +98,10 @@ class VendorLivewire extends VendorTimingLivewire
             "secondPhoto" => "required|image|max:2048",
             "phone" => "required|phone:" . setting('countryCode', "INTERNATIONAL") . "",
             "password" => "sometimes|nullable|string",
+            "discount_value" => "nullable|numeric|min:0",
+            "discount_type" => "nullable|in:percent,flat",
+            "discount_from" => "nullable|date",
+            "discount_to" => "nullable|date|after_or_equal:discount_from",
         ];
     }
 
@@ -160,6 +169,43 @@ class VendorLivewire extends VendorTimingLivewire
         parent::showCreateModal();
     }
 
+    protected function normalizeDiscountTypeIncoming($value)
+    {
+        if (empty($value)) return null;
+
+        if (is_string($value)) return $value;
+
+        if (is_array($value)) {
+            if (isset($value['value']) && is_string($value['value'])) {
+                return $value['value'];
+            }
+
+            if (isset($value[0]) && is_array($value[0]) && isset($value[0]['value'])) {
+                return $value[0]['value'];
+            }
+
+            if (count($value) === 1) {
+                $keys = array_keys($value);
+                return is_string($keys[0]) ? $keys[0] : null;
+            }
+
+            foreach ($value as $k => $v) {
+                if ($k === 'value' && is_array($v) && count($v) === 1) {
+                    $sub = array_keys($v);
+                    return $sub[0] ?? null;
+                }
+            }
+
+            $flatSearch = array_search('flat', $value, true);
+            $percentSearch = array_search('percent', $value, true);
+            if ($flatSearch !== false) return 'flat';
+            if ($percentSearch !== false) return 'percent';
+        }
+
+        return null;
+    }
+
+
     public function save()
     {
         //validate
@@ -188,6 +234,7 @@ class VendorLivewire extends VendorTimingLivewire
                 $this->commission = null;
             }
             $model->commission = $this->commission;
+
             $model->tax = $this->tax;
             $model->pickup = $this->pickup ?? 0;
             $model->delivery = $this->delivery ?? 0;
@@ -207,6 +254,11 @@ class VendorLivewire extends VendorTimingLivewire
             $model->delivery_time = $this->delivery_time;
             $model->delivery_time_unit = $this->delivery_time_unit ?? $this->timeUnits[0];
             $model->in_order = $this->in_order;
+            $model->discount_value = $this->discount_value;
+            $model->discount_type = $this->discount_type;
+            $model->discount_from = $this->discount_from;
+            $model->discount_to = $this->discount_to;
+
             //creator
             $model->creator_id = \Auth::id();
             $model->save();
@@ -304,6 +356,17 @@ class VendorLivewire extends VendorTimingLivewire
         $this->delivery_time = $this->selectedModel->delivery_time;
         $this->delivery_time_unit = $this->selectedModel->delivery_time_unit;
         $this->in_order = $this->selectedModel->in_order;
+        $this->discount_value = $this->selectedModel->discount_value;
+        $this->discount_type = $this->selectedModel->discount_type;
+        $this->discount_from = $this->selectedModel->discount_from
+            ? \Carbon\Carbon::parse($this->selectedModel->discount_from)->format('Y-m-d')
+            : null;
+
+        $this->discount_to = $this->selectedModel->discount_to
+            ? \Carbon\Carbon::parse($this->selectedModel->discount_to)->format('Y-m-d')
+            : null;
+
+
 
 
         //
@@ -328,6 +391,9 @@ class VendorLivewire extends VendorTimingLivewire
 
     public function update()
     {
+        logger('before_normalize', ['raw' => $this->discount_type]);
+        $this->discount_type = $this->normalizeDiscountTypeIncoming($this->discount_type);
+        logger('after_normalize', ['normalized' => $this->discount_type]);
         //validate
         $this->validate(
             [
@@ -340,6 +406,11 @@ class VendorLivewire extends VendorTimingLivewire
                 "longitude" => "required|numeric",
                 "photo" => "nullable|sometimes|image|max:" . setting("filelimit.vendor_logo", 2048) . "",
                 "secondPhoto" => "nullable|sometimes|image|max:" . setting("filelimit.vendor_feature", 2048) . "",
+                "discount_value" => "nullable|numeric|min:0",
+                "discount_type" => "nullable|in:percent,flat",
+                "discount_from" => "nullable|date",
+                "discount_to"   => "nullable|date|after_or_equal:discount_from",
+
             ]
         );
 
@@ -382,6 +453,11 @@ class VendorLivewire extends VendorTimingLivewire
             $model->delivery_time = $this->delivery_time;
             $model->delivery_time_unit = $this->delivery_time_unit ?? $this->timeUnits[0];
             $model->in_order = $this->in_order;
+            $model->discount_value = $this->discount_value;
+            $model->discount_type = $this->discount_type;
+            $model->discount_from = $this->discount_from;
+            $model->discount_to = $this->discount_to;
+
             $model->save();
 
             //sync the delivery_zones
@@ -420,7 +496,7 @@ class VendorLivewire extends VendorTimingLivewire
             $model->fees()->sync($this->feesIDs);
 
             $user = User::where('id', $model->vendor_id)->first();
-            if($user){
+            if ($user) {
                 $user->name = $this->name;
                 $user->email = $this->email;
                 $user->phone = $this->phone;
@@ -432,7 +508,7 @@ class VendorLivewire extends VendorTimingLivewire
             }
             //client role if not set
             // $user->assignRole("manager");
-            
+
 
             DB::commit();
 
@@ -500,7 +576,7 @@ class VendorLivewire extends VendorTimingLivewire
         if ($this->alwaysOpen) {
             $this->model::where('id', $vendorId)->update(['always_open' => 1]);
 
-            for($i=1;$i<=7;$i++){
+            for ($i = 1; $i <= 7; $i++) {
                 DB::table('day_vendor')->where('day_id', $i)->where('vendor_id', $vendorId)->delete();
 
                 DB::table('day_vendor')->insert([

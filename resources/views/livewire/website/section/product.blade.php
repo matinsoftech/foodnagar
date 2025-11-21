@@ -118,7 +118,11 @@
                                             <div>
                                                 <span class="text-dark">${{ $product->discount_price }}</span>
                                                 <span
-                                                    class="text-decoration-line-through text-muted">${{ $product->price }}</span>
+                                                    class="text-decoration-line-through text-muted">
+                                                    {{-- ${{ $product->price }} --}}
+                                                    <x-product-price :product="$product" />
+
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

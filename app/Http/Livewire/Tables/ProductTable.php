@@ -52,7 +52,7 @@ class ProductTable extends OrderingBaseDataTableComponent
 
         $user = User::find(Auth::id());
         if ($user->hasRole('admin')) {
-            $mQuery = Product::when($this->getFilter('digital'), fn ($query, $isDigital) => $query->whereDigital($isDigital));
+            $mQuery = Product::when($this->getFilter('digital'), fn($query, $isDigital) => $query->whereDigital($isDigital));
         } elseif ($user->hasRole('city-admin')) {
             $mQuery = Product::with('vendor')->whereHas("vendor", function ($query) {
                 return $query->where('creator_id', Auth::id());
@@ -120,17 +120,103 @@ class ProductTable extends OrderingBaseDataTableComponent
                         });
                     }
                 ),
-            Column::make(__('Price'), 'price')->format(function ($value, $column, $row) {
-                if ($row->discount_price) {
-                    $text = "<span class='font-medium'>" . currencyFormat($row->discount_price ??  '') . "</span>";
-                    $text .= " <span class='text-xs line-through'>" . currencyFormat($row->price) . "</span>";
-                } else {
-                    $text = currencyFormat($value ??  '');
+            // Column::make(__('Price'), 'price')->format(function ($value, $column, $row) {
+            //     if ($row->discount_price) {
+            //         $text = "<span class='font-medium'>" . currencyFormat($row->discount_price ??  '') . "</span>";
+            //         $text .= " <span class='text-xs line-through'>" . currencyFormat($row->price) . "</span>";
+            //     } else {
+            //         $text = currencyFormat($value ??  '');
+            //     }
+            //     return view('components.table.plain', $data = [
+            //         "text" => $text
+            //     ]);
+            // })->searchable()->sortable(),
+            Column::make(__('Price'))->format(function ($value, $column, $row) {
+
+                $original  = floatval($row->price);
+                $final     = floatval($row->final_price);
+                $vendor    = $row->vendor ?? null;
+
+                $hasProductDiscount = (!empty($row->discount_price) && $row->discount_price > 0);
+                $vendorActive       = ($vendor && $vendor->discount_active);
+
+                $discountType  = null;
+                $discountLabel = '';
+                $youSave       = 0;
+
+                // ────────────────────────────────────────────
+                // CASE 1 — Product-level discount
+                // ────────────────────────────────────────────
+                if ($hasProductDiscount) {
+                    $discountType  = 'product';
+                    $youSave       = $original - floatval($row->discount_price);
+                    $discountLabel = "Product Discount";
+                    $final         = floatval($row->discount_price);
                 }
-                return view('components.table.plain', $data = [
-                    "text" => $text
-                ]);
-            })->searchable()->sortable(),
+
+                // ────────────────────────────────────────────
+                // CASE 2 — Vendor-level discount
+                // ────────────────────────────────────────────
+                elseif ($vendorActive && $final < $original) {
+                    $discountType = $vendor->discount_type;
+
+                    if ($discountType === 'percent') {
+                        $youSave       = ($original * $vendor->discount_value) / 100;
+                        $discountLabel = "{$vendor->discount_value}% Vendor Discount";
+                    } else {
+                        $youSave       = floatval($vendor->discount_value);
+                        $discountLabel = currencyFormat($vendor->discount_value) . " Vendor Discount";
+                    }
+                }
+
+                $youSave = round($youSave, 2);
+
+                // ────────────────────────────────────────────
+                // HTML BUILD
+                // ────────────────────────────────────────────
+                $html = "<div class='flex flex-col'>";
+
+                // FINAL PRICE + ORIGINAL PRICE
+                if ($final < $original) {
+                    $html .= "
+            <span class='font-semibold text-base text-green-700'>
+                " . currencyFormat($final) . "
+            </span>
+            <span class='text-xs line-through text-gray-500'>
+                " . currencyFormat($original) . "
+            </span>
+        ";
+                } else {
+                    $html .= "<span class='font-semibold'>" . currencyFormat($original) . "</span>";
+                }
+
+                // DISCOUNT LABEL
+                if ($discountType) {
+                    $html .= "
+            <span class='text-xs text-blue-700 mt-1'>
+                <strong>{$discountLabel}</strong>
+            </span>
+        ";
+                }
+
+                // YOU SAVE
+                if ($youSave > 0) {
+                    $html .= "
+            <span class='text-xs text-purple-600 font-semibold'>
+                You save: " . currencyFormat($youSave) . "
+            </span>
+        ";
+                }
+
+                $html .= "</div>";
+
+                return view('components.table.plain', ["text" => $html]);
+            })
+                ->sortable()
+                ->searchable(),
+
+
+
             Column::make(__('Qty'), "available_qty")->format(function ($value, $column, $row) {
                 if ($value == null) {
                     return __("Unlimited");

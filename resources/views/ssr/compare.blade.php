@@ -9,7 +9,9 @@
         <div class="compare-product-price d-flex flex-wrap align-items-center gap-8 my-2">
             <span class="text-accent text-dark">Rs. {{ $product->price - $product->discount_price }}
                 <del class="compare-discount-product-price">
-                    Rs. {{ $product->price }}
+                    {{-- Rs. {{ $product->price }} --}}
+                    <x-product-price :product="$product" />
+
                 </del>
             </span>
         </div>

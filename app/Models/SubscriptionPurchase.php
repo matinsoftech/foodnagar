@@ -35,6 +35,16 @@ class SubscriptionPurchase extends Model
         return $this->payment_receipt ? asset('storage/' . $this->payment_receipt) : null;
     }
 
+    public static function userHasActiveSubscription($userId)
+    {
+        return self::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->exists();
+    }
+
+
     public function getIsExpiredAttribute()
     {
         return $this->end_date && Carbon::now()->greaterThan($this->end_date);

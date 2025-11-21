@@ -136,6 +136,7 @@ class OrderController extends Controller
 
             //Check if user has active subscription
             $userHasSubscription = SubscriptionPurchase::userHasActiveSubscription(Auth::id());
+            // dd($userHasSubscription);
             
             if ($userHasSubscription) {
                 // Free delivery for subscribed users
@@ -198,7 +199,7 @@ class OrderController extends Controller
                 'delivery_fee_type' => $deliveryFeeType,
             ]);
 
-            return $request->all();
+            // return $request->all();
 
             //proces regular single vendor order
             if (!$request->has("data")) {

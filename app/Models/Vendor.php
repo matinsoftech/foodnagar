@@ -34,17 +34,98 @@ class Vendor extends BaseModel
         'is_active' => 'int',
         'reviews_count' => 'int',
         'is_open' => 'boolean',
+        'discount_value' => 'decimal:2',
+        'discount_from' => 'date',
+        'discount_to' => 'date',
     ];
     protected $appends = [
-        'formatted_date', 'logo', 'feature_image', 'rating', 'can_rate', 'slots', 'is_package_vendor', 'has_subscription',
-        'document_requested', 'pending_document_approval'
+        'formatted_date',
+        'logo',
+        'feature_image',
+        'rating',
+        'can_rate',
+        'slots',
+        'is_package_vendor',
+        'has_subscription',
+        'document_requested',
+        'pending_document_approval',
+        'discount_active',
     ];
     protected $with = ['vendor_type', 'fees'];
     protected $withCount = ['reviews'];
 
     protected $fillable = [
-        "id", "name", "description", "delivery_fee", "delivery_range", "tax", "phone", "email", "address", "latitude", "longitude", "commission", "pickup", "delivery", "is_active", "charge_per_km", "is_open", "vendor_type_id"
+        "id",
+        "name",
+        "description",
+        "delivery_fee",
+        "delivery_range",
+        "tax",
+        "phone",
+        "email",
+        "address",
+        "latitude",
+        "longitude",
+        "commission",
+        "pickup",
+        "delivery",
+        "is_active",
+        "charge_per_km",
+        "is_open",
+        "vendor_type_id",
+        "discount_value",
+        "discount_type",
+        "discount_from",
+        "discount_to",
     ];
+
+    public function getDiscountStatusAttribute()
+    {
+        if (empty($this->discount_value) || empty($this->discount_from) || empty($this->discount_to)) {
+            return 'none';
+        }
+
+        $today = Carbon::today();
+        $from = Carbon::parse($this->discount_from)->startOfDay();
+        $to   = Carbon::parse($this->discount_to)->endOfDay();
+
+        if ($today->between($from, $to)) {
+            return 'active';
+        }
+
+        if ($today->lt($from)) {
+            return 'upcoming';
+        }
+
+        if ($today->gt($to)) {
+            return 'expired';
+        }
+
+        return 'none';
+    }
+    public function getDiscountActiveAttribute()
+    {
+        return $this->discount_status === 'active';
+    }
+
+    public function getDiscountBadgeAttribute()
+    {
+        if ($this->discount_status === 'active') {
+            return "{$this->discount_value}" . ($this->discount_type === 'percent' ? '%' : ' OFF');
+        }
+        return null;
+    }
+
+    public function applyDiscount($price)
+    {
+        if (!$this->discount_active) return $price;
+
+        if ($this->discount_type === 'percent') {
+            return $price - ($price * ($this->discount_value / 100));
+        }
+
+        return max($price - $this->discount_value, 0);
+    }
 
 
     public function registerMediaCollections(): void
@@ -293,7 +374,7 @@ class Vendor extends BaseModel
 
     public function days()
     {
-        return $this->belongsToMany('App\Models\Day')->withPivot('id','slot', 'day_id', 'open', 'close');
+        return $this->belongsToMany('App\Models\Day')->withPivot('id', 'slot', 'day_id', 'open', 'close');
     }
 
     public function products()

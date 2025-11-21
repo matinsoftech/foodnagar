@@ -41,7 +41,7 @@ class Product extends BaseModel
         'name',
         'description',
         'price',
-        'discount_price',  
+        'discount_price',
         'capacity',
         'unit',
         'package_count',
@@ -51,13 +51,13 @@ class Product extends BaseModel
         'is_active',
         'vendor_id',
         'vendor_type_id',
-        'province_id',      
-        'district_id',     
-        'city_id',          
-        'ad_type',         
-        'category_id', 
+        'province_id',
+        'district_id',
+        'city_id',
+        'ad_type',
+        'category_id',
         'user_approve',
-        'brand_id',  
+        'brand_id',
     ];
 
 
@@ -82,6 +82,19 @@ class Product extends BaseModel
         //
         return $query;
     }
+
+    // public function getFinalPriceAttribute()
+    // {
+    //     $price = $this->price;
+
+    //     // If product belongs to a vendor and vendor discount is active
+    //     if ($this->vendor && $this->vendor->discount_active) {
+    //         return $this->vendor->applyDiscount($price);
+    //     }
+
+    //     return $price;
+    // }
+
 
     public function scopeMine($query)
     {
@@ -126,7 +139,7 @@ class Product extends BaseModel
 
     public function userInfo()
     {
-        return $this->hasOne(UserProductInfo::class, 'product_id','id');
+        return $this->hasOne(UserProductInfo::class, 'product_id', 'id');
     }
 
     // Media handling for images (if you're using a package like Spatie Media Library)
@@ -234,7 +247,7 @@ class Product extends BaseModel
 
     public function productSubscription()
     {
-        return $this->hasMany('App\Models\ProductSubscription', 'product_id','id');
+        return $this->hasMany('App\Models\ProductSubscription', 'product_id', 'id');
     }
 
     public function getRatingAttribute()
@@ -259,12 +272,33 @@ class Product extends BaseModel
 
 
 
+    // public function getSellPriceAttribute()
+    // {
+    //     return ($this->discount_price != null && $this->discount_price > 0) ? $this->discount_price : $this->price;
+    // }
+
     public function getSellPriceAttribute()
     {
-        return ($this->discount_price != null && $this->discount_price > 0) ? $this->discount_price : $this->price;
+        // 1. Product-level discount always wins
+        // if (!empty($this->discount_price) && $this->discount_price > 0) {
+        //     return $this->discount_price;
+        // }
+
+        // 2. Vendor-level discount applies automatically
+        if ($this->vendor && $this->vendor->discount_active) {
+            return $this->vendor->applyDiscount($this->price);
+        }
+
+        // 3. No discount – return original price
+        return $this->price;
+    }
+    public function getFinalPriceAttribute()
+    {
+        return $this->sell_price;
     }
 
-    public function getBrandIdAttribute($value) 
+
+    public function getBrandIdAttribute($value)
     {
         return $value;
     }

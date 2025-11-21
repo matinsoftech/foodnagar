@@ -187,7 +187,8 @@ Route::group(['middleware' => ['auth:sanctum', "user.active.check"]], function (
     Route::put('profile/password/update', [AuthController::class, 'changePassword']);
     Route::delete('account/delete', [AccountManagementController::class, 'delete']);
     Route::apiResource('delivery/addresses', DeliveryAddressController::class);
-    Route::apiResource('orders', OrderController::class)->only('index', 'show', 'update');
+    // Route::apiResource('orders', OrderController::class)->only('index', 'show', 'update');
+    Route::apiResource('orders', OrderController::class);
     Route::middleware('throttle.order.api')->group(function () {
         Route::post('orders', [OrderController::class, 'store']);
     });

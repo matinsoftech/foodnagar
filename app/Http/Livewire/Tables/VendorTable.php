@@ -60,8 +60,8 @@ class VendorTable extends OrderingBaseDataTableComponent
     public function query()
     {
         return Vendor::with('vendor_type')->mine()
-            ->when($this->getFilter('vendor_type'), fn ($query, $value) => $query->where('vendor_type_id', $value))
-            ->when($this->getFilter('featured'), fn ($query, $value) => $query->where('featured', $value));
+            ->when($this->getFilter('vendor_type'), fn($query, $value) => $query->where('vendor_type_id', $value))
+            ->when($this->getFilter('featured'), fn($query, $value) => $query->where('featured', $value));
     }
 
     public function setTableRowClass($row): ?string
@@ -91,6 +91,62 @@ class VendorTable extends OrderingBaseDataTableComponent
                     }
                 ),
             Column::make(__('Type'), 'vendor_type.name'),
+            // Discount Column Here
+            Column::make(__('Discount'))->format(function ($value, $column, $row) {
+
+                if (empty($row->discount_value)) {
+                    return "-";
+                }
+
+                // ★ Amount
+                $typeSymbol = $row->discount_type === 'percent' ? '%' : '';
+                $amountText = $row->discount_type === 'percent'
+                    ? "{$row->discount_value}{$typeSymbol}"
+                    : number_format($row->discount_value, 2);
+
+                // ★ Display Type Text
+                $displayType = $row->discount_type === 'percent'
+                    ? "Percent (%)"
+                    : "Flat Amount";
+
+                $typeBadge = "<span class='text-xs text-gray-600'>({$displayType})</span>";
+
+                // ★ Status Badge
+                $status = $row->discount_status;
+                $badgeClass = [
+                    'active'   => 'bg-green-100 text-green-800',
+                    'upcoming' => 'bg-blue-100 text-blue-800',
+                    'expired'  => 'bg-red-100 text-red-800',
+                    'none'     => 'bg-gray-100 text-gray-600'
+                ][$status];
+
+                $badgeText = ucfirst($status);
+                $badge = "<span class='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {$badgeClass}'>
+        {$badgeText}
+    </span>";
+
+                // ★ Dates (date only, no time)
+                $from = $row->discount_from ? $row->discount_from->format('Y-m-d') : '-';
+                $to   = $row->discount_to ? $row->discount_to->format('Y-m-d') : '-';
+
+                $dateRange = "<div class='text-xs text-muted'>{$from} - {$to}</div>";
+
+                return view('components.table.plain', [
+                    'text' => "
+            <div class='flex flex-col leading-tight'>
+                <div class='flex items-center gap-2'>
+                    {$badge}
+                    <span class='font-semibold'>{$amountText}</span>
+                    {$typeBadge}
+                </div>
+                {$dateRange}
+            </div>"
+                ]);
+            }),
+
+
+
+
             Column::make(__('Created At'), 'formatted_date'),
             Column::make(__('Actions'))->format(function ($value, $column, $row) {
                 return view('components.buttons.market_actions', $data = [

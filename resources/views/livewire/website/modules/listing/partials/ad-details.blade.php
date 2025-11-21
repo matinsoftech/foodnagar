@@ -753,7 +753,9 @@
                             <ul class="ad-details-specific">
                                 <li>
                                     <h6>Price:</h6>
-                                    <p>{{ $product->price }}</p>
+                                    {{-- <p>{{ $product->price }}</p> --}}
+                                    <x-product-price :product="$product" />
+
                                 </li>
                                 <li>
                                     <h6>Seller Type:</h6>
@@ -874,7 +876,12 @@
                         </div>
                         <!-- PRICE CARD -->
                         <div class="common-card price">
-                            <h3 class="d-flex gap-3">{{ $product->price }}<span>/{{ $product->unit }}</span></h3>
+                            <h3 class="d-flex gap-3">
+                                {{-- {{ $product->price }} --}}
+                                <x-product-price :product="$product" />
+
+                                
+                                <span>/{{ $product->unit }}</span></h3>
                             <i class="fas fa-tag"></i>
                         </div>
                         <div class="common-card row mx-0">
